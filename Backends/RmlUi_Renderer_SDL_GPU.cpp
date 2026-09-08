@@ -1,5 +1,6 @@
 #include "RmlUi_Renderer_SDL_GPU.h"
 #include "RmlUi_SDL_GPU/ShadersCompiledSPV.h"
+#include "RmlUi_SDL_GPU/ShadersCompiledWGSL.h"
 #include <RmlUi/Core/Core.h>
 #include <RmlUi/Core/FileInterface.h>
 #include <RmlUi/Core/Log.h>
@@ -19,6 +20,7 @@ enum ShaderFormat {
 	ShaderFormatSPIRV,
 	ShaderFormatMSL,
 	ShaderFormatDXIL,
+	ShaderFormatWGSL,
 	ShaderFormatCount,
 };
 
@@ -37,9 +39,13 @@ struct Shader {
 	}
 
 static const Shader shaders[ShaderTypeCount] = {
-	{{X(shader_frag_color_spirv), X(shader_frag_color_msl), X(shader_frag_color_dxil)}, 0, 0, SDL_GPU_SHADERSTAGE_FRAGMENT},
-	{{X(shader_frag_texture_spirv), X(shader_frag_texture_msl), X(shader_frag_texture_dxil)}, 0, 1, SDL_GPU_SHADERSTAGE_FRAGMENT},
-	{{X(shader_vert_spirv), X(shader_vert_msl), X(shader_vert_dxil)}, 2, 0, SDL_GPU_SHADERSTAGE_VERTEX}};
+	{{X(shader_frag_color_spirv), X(shader_frag_color_msl), X(shader_frag_color_dxil), {shader_frag_color_wgsl, sizeof(shader_frag_color_wgsl) - 1}},
+		0, 0, SDL_GPU_SHADERSTAGE_FRAGMENT},
+	{{X(shader_frag_texture_spirv), X(shader_frag_texture_msl), X(shader_frag_texture_dxil),
+		 {shader_frag_texture_wgsl, sizeof(shader_frag_texture_wgsl) - 1}},
+		0, 1, SDL_GPU_SHADERSTAGE_FRAGMENT},
+	{{X(shader_vert_spirv), X(shader_vert_msl), X(shader_vert_dxil), {shader_vert_wgsl, sizeof(shader_vert_wgsl) - 1}}, 2, 0,
+		SDL_GPU_SHADERSTAGE_VERTEX}};
 
 #undef X
 
@@ -66,6 +72,14 @@ static SDL_GPUShader* CreateShaderFromMemory(SDL_GPUDevice* device, ShaderType t
 		format = ShaderFormatMSL;
 		entrypoint = "main0";
 	}
+#ifdef SDL_GPU_SHADERFORMAT_WGSL
+	else if (sdl_shader_format & SDL_GPU_SHADERFORMAT_WGSL)
+	{
+		sdl_shader_format = SDL_GPU_SHADERFORMAT_WGSL;
+		format = ShaderFormatWGSL;
+		entrypoint = "main";
+	}
+#endif
 	else
 	{
 		RMLUI_ERRORMSG("Invalid shader format");
